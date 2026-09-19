@@ -21,6 +21,23 @@ links:
     url: https://github.com/example-org/ai-platform-docs/blob/main/gateway.md
   - label: Quota and cost dashboard
     url: https://github.com/example-org/ai-platform-docs/blob/main/quotas.md
+phases:
+  - name: Phase 1 — pilot
+    audience: The AI platform team's own services
+    status: generally-available
+    timeline:
+      rolling-out: 2026-01-12
+      generally-available: 2026-05-25
+  - name: Phase 2 — reviewed use cases
+    audience: Product teams with a reviewed use case
+    status: rolling-out
+    timeline:
+      rolling-out: 2026-06-15
+  - name: Phase 3 — everyone
+    audience: All engineering
+    status: proposed
+    timeline:
+      generally-available: 2026-10-19
 updates:
   - date: 2026-09-16
     status: rolling-out
