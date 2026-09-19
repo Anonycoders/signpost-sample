@@ -68,8 +68,8 @@ Plus a filterable catalog of every streamline, a page per team, a page per strea
 ## Quickstart
 
 ```bash
-git clone https://github.com/Anonycoders/signpost.git
-cd signpost
+git clone https://github.com/Anonycoders/signpost-sample.git
+cd signpost-sample
 nvm use          # Node 26, per .nvmrc — the repo sets engine-strict
 npm install
 npm run dev      # http://localhost:4321
