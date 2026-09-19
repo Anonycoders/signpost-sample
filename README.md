@@ -16,22 +16,27 @@ Everything under `content/` here is fictional — four invented platform teams, 
 
 ### Keeping this in step with the template
 
-The product's own history is upstream, so improvements are merged in rather than reimplemented:
+The product's own history is upstream, so improvements are merged in rather than reimplemented. Every sync is the same four commands:
 
 ```bash
-git remote add template https://github.com/Anonycoders/signpost.git
+# once:  git remote add template https://github.com/Anonycoders/signpost.git
 git fetch template
 git merge template/main
+git checkout ORIG_HEAD -- content/ README.md .github/CODEOWNERS
+git commit -m "Restore the sample's own files after syncing"   # if that changed anything
 ```
 
-**The first such merge will delete `content/`, and that is expected.** The template removes the demo content from itself in order to ship empty; merging that commit applies the deletion here, where the demo is the entire point. Put it back once, in the same sitting:
+`ORIG_HEAD` is the pre-merge tip, set by `git merge` itself.
 
-```bash
-git checkout ORIG_HEAD -- content/    # ORIG_HEAD is the pre-merge tip, set by git merge
-git commit -m "Restore the sample content after syncing with the template"
-```
+**This repository owns exactly three paths** — `content/`, `README.md` and `.github/CODEOWNERS`. Everything else belongs to the product, and the merge is welcome to overwrite it.
 
-Only that one merge needs it. Afterwards `content/` exists on this side of the history and not upstream, so every later `git merge template/main` leaves it alone — no conflict, no restore step, nothing to remember.
+`content/` is the obvious one. The template deletes its own demo in order to ship empty, and merging that deletion here would take the entire point of this repository with it.
+
+The other two are not obvious, and they caused real damage the first time this was done. The template's README and CODEOWNERS describe *the template*: a repository that ships empty, with placeholder team handles that deliberately resolve to nobody. This repository has files at those same paths saying the opposite. When only the template edits them, Git sees no conflict — it merges cleanly and leaves this README announcing that it is an empty template, which it is not. **A clean merge is not the same as a correct one**, and the files where the product describes its own emptiness are exactly where the two diverge silently.
+
+So the restore step is not a one-time fix; it is part of the recipe. Run it on every sync, whether or not anything came through — `git checkout` on an unchanged path is a no-op, and the commit simply refuses when there is nothing to commit. That leaves nothing to remember and no judgment to exercise.
+
+A template change that genuinely belongs here — a better sentence in the README, a real improvement to the ownership pattern — is ported across by hand, deliberately, as its own commit.
 
 ---
 
@@ -43,7 +48,7 @@ Signpost gives every team one file per effort. They edit it when the plan change
 
 ## What it looks like
 
-**[See it running →](https://anonycoders.github.io/signpost-sample/)** — a populated instance with four invented platform teams and thirteen streamlines, published from [`Anonycoders/signpost-sample`](https://github.com/Anonycoders/signpost-sample). This repository is the template that sample was made from, and it ships empty; the screenshots below are of the sample.
+**The screenshots below are of this repository's own site**, published at [anonycoders.github.io/signpost-sample](https://anonycoders.github.io/signpost-sample/) — the four invented teams and thirteen streamlines that live in `content/` here. The empty product they were taken from is [Anonycoders/signpost](https://github.com/Anonycoders/signpost).
 
 **Roadmap** — every effort as a lane across six quarters, filterable by team, stage and category.
 
@@ -77,7 +82,7 @@ npm install
 npm run dev      # http://localhost:4321
 ```
 
-`content/` ships empty, so that is an empty site — every page renders, and every page tells you what to add. Filling it is [docs/adopting.md](docs/adopting.md); the [sample](https://anonycoders.github.io/signpost-sample/) is where it ends up.
+That comes up populated: `content/` here holds four teams and thirteen streamlines, so you get the whole site — roadmap, changes, feeds — with something in it to click. All of it is fictional, and it is here to show the shape of a real instance rather than to be one. To start a real one, begin at [Anonycoders/signpost](https://github.com/Anonycoders/signpost), which ships empty, and follow [docs/adopting.md](docs/adopting.md).
 
 Other scripts:
 
@@ -119,7 +124,7 @@ Edit, open a pull request, CODEOWNERS routes it to your team, CI validates it, m
 
 ## Running it for your own organization
 
-Fork it, edit one config file, add your content. **[docs/adopting.md](docs/adopting.md)** walks through it: naming and branding, defining your own lifecycle stages and categories, wiring CODEOWNERS to your teams, deploying to GitHub Pages (including GitHub Enterprise), and what to do if your instance has Pages turned off.
+Fork [the template](https://github.com/Anonycoders/signpost) rather than this repository, edit one config file, add your content. **[docs/adopting.md](docs/adopting.md)** walks through it: naming and branding, defining your own lifecycle stages and categories, wiring CODEOWNERS to your teams, deploying to GitHub Pages (including GitHub Enterprise), and what to do if your instance has Pages turned off.
 
 Everything an organization needs to change lives in [`site.config.ts`](site.config.ts) — the stages, the categories, the impact levels, the colours, the attention windows. The rules follow the config: rename `deprecated` to `sunsetting` and the validator's messages, the filters and the roadmap legend all rename with it.
 
@@ -163,7 +168,7 @@ Built with [Astro](https://astro.build) and [Tailwind CSS](https://tailwindcss.c
 
 ## Contributing to Signpost itself
 
-Bug reports, ideas and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md#changing-the-site-itself) and the [Code of Conduct](CODE_OF_CONDUCT.md). **[docs/developing.md](docs/developing.md)** is the tour of the code: the data flow file by file, where the two validation layers live, and what must never be hardcoded. If you have adopted this somewhere, we would genuinely like to hear what you had to change.
+Bug reports, ideas and pull requests are welcome, and they belong on [the product](https://github.com/Anonycoders/signpost) rather than here — see [CONTRIBUTING.md](CONTRIBUTING.md#changing-the-site-itself) and the [Code of Conduct](CODE_OF_CONDUCT.md). **[docs/developing.md](docs/developing.md)** is the tour of the code: the data flow file by file, where the two validation layers live, and what must never be hardcoded. If you have adopted this somewhere, we would genuinely like to hear what you had to change.
 
 ## License
 
