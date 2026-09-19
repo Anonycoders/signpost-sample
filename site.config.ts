@@ -130,7 +130,7 @@ export const siteConfig: SiteConfig = {
   organization: 'Example Organization',
 
   repository: {
-    url: 'https://github.com/Anonycoders/signpost',
+    url: 'https://github.com/Anonycoders/signpost-sample',
     branch: 'main',
   },
 

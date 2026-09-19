@@ -4,6 +4,37 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+---
+
+## This repository is the live sample
+
+The product lives at **[Anonycoders/signpost](https://github.com/Anonycoders/signpost)** and ships empty, ready to adopt. This repository is a copy of it with the demo content left in, kept running so that anyone deciding whether to adopt Signpost can read a populated site instead of an empty one.
+
+Everything under `content/` here is fictional — four invented platform teams, thirteen streamlines — and `Example Organization` is not a real company. Nothing here is a statement about anybody's roadmap.
+
+**If you want to run Signpost, start at the template, not here.** Forking this repository means inheriting a demo you will have to delete.
+
+### Keeping this in step with the template
+
+The product's own history is upstream, so improvements are merged in rather than reimplemented:
+
+```bash
+git remote add template https://github.com/Anonycoders/signpost.git
+git fetch template
+git merge template/main
+```
+
+**The first such merge will delete `content/`, and that is expected.** The template removes the demo content from itself in order to ship empty; merging that commit applies the deletion here, where the demo is the entire point. Put it back once, in the same sitting:
+
+```bash
+git checkout ORIG_HEAD -- content/    # ORIG_HEAD is the pre-merge tip, set by git merge
+git commit -m "Restore the sample content after syncing with the template"
+```
+
+Only that one merge needs it. Afterwards `content/` exists on this side of the history and not upstream, so every later `git merge template/main` leaves it alone — no conflict, no restore step, nothing to remember.
+
+---
+
 Platform teams ship things that land on everyone else: a cluster upgrade, a CI migration, a deprecated gateway. The work is usually visible *somewhere* — a wiki page, a Slack thread, a Jira epic nobody outside the team can read — and the result is the same either way. Other teams find out when something breaks.
 
 Signpost gives every team one file per effort. They edit it when the plan changes, open a pull request, and the site rebuilds. Anyone can see which stage each effort is in, when it lands, and who owns it — and subscribe to a feed so they do not have to check.
