@@ -54,8 +54,10 @@ updates:
       Run `kubectl deprecations --context <your-cluster>` to see whether you are
       affected. The migration guide has the before-and-after manifests.
     actions:
-      - Run kubectl deprecations against every cluster your team owns.
-      - Move any v1beta1 Ingress objects to networking.k8s.io/v1 and redeploy to staging.
+      - Run `kubectl deprecations --context <your-cluster>` against every cluster your team owns.
+      - >-
+        Move any v1beta1 Ingress objects to `networking.k8s.io/v1`, using the
+        [before-and-after manifests](https://github.com/example-org/devops-runbooks/blob/main/k8s-1-31.md).
       - "Tell us in #devops if you cannot make 1 October, before the waves start."
   - date: 2026-09-01
     status: rolling-out
