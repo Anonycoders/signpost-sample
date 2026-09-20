@@ -13,6 +13,7 @@ timeline:
   proposed: 2026-09-08
   in-development: 2026-11-16
   rolling-out: 2027-03-01
+  generally-available: 2027-06-14
 links:
   - label: Proposal and open questions
     url: https://github.com/example-org/ai-platform-docs/blob/main/rfc-agent-sandbox.md
