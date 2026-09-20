@@ -10,6 +10,7 @@ owners:
   - name: Deniz Aydin
     github: denizaydin
     slack: deniz.aydin
+    slackId: U024BE7LH
 timeline:
   proposed: 2023-01-09
   in-development: 2023-03-06

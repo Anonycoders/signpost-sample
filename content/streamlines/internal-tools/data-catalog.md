@@ -10,6 +10,7 @@ owners:
   - name: Deniz Aydin
     github: denizaydin
     slack: deniz.aydin
+    slackId: U024BE7LH
   - name: Laura Mensah
     slack: laura.mensah
 timeline:

@@ -154,10 +154,12 @@ export const siteConfig: SiteConfig = {
     url: 'https://github.com/Anonycoders/signpost/issues',
   },
 
-  // Uncomment and point at your own workspace to make owners' Slack handles
-  // clickable. See the field's documentation above for why an owner also
-  // needs a `slackId` before their handle can link anywhere.
-  // slackWorkspaceUrl: 'https://acmeco.slack.com',
+  // Invented, like the teams and the streamlines: there is no such workspace,
+  // so these links reach Slack and stop at its own "no workspace at this URL"
+  // page. What the sample is showing is the thing a fork would see for real —
+  // that a handle with a member ID beside it becomes a link, and that a handle
+  // without one stays plain text on the same page.
+  slackWorkspaceUrl: 'https://example-org.slack.com',
 
   locale: 'en-GB',
 
