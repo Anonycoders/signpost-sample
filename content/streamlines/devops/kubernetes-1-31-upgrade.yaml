@@ -56,7 +56,7 @@ updates:
     actions:
       - Run kubectl deprecations against every cluster your team owns.
       - Move any v1beta1 Ingress objects to networking.k8s.io/v1 and redeploy to staging.
-      - Tell us in #devops if you cannot make 1 October, before the waves start.
+      - "Tell us in #devops if you cannot make 1 October, before the waves start."
   - date: 2026-09-01
     status: rolling-out
     impact: info
