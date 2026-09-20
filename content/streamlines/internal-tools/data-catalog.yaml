@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../schemas/streamline.schema.json
 title: Data catalog
 team: internal-tools
 category: data

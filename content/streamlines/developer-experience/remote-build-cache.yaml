@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../schemas/streamline.schema.json
 title: Remote build cache
 team: developer-experience
 category: developer-experience

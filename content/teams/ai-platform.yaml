@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: AI Platform
 mission: >-
   Provides the shared way to build with models here — access, evaluation,

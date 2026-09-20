@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/team.schema.json
 name: Developer Experience
 mission: >-
   Makes the day-to-day of building software here fast and boring: project
