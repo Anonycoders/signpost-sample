@@ -22,6 +22,7 @@ things are before you change one of them.
 - [Feeds](#feeds)
 - [CI](#ci)
 - [Deploy](#deploy)
+- [Announcements](#announcements)
 - [What not to hardcode](#what-not-to-hardcode)
 
 ---
@@ -46,6 +47,7 @@ the one this repository is built and tested against.
 | --- | --- | --- |
 | `npm run dev` | `astro dev` | Nothing — hot reload, content included. |
 | `npm run validate` | `tsx scripts/validate-content.ts` | The content rules. Fast, no build, and the first thing CI reports. |
+| `npm run schema` | `tsx scripts/json-schema.ts` | Nothing — rewrites `schemas/` from the Zod schemas. Add `-- --check` and it gates instead: CI fails if what is committed is stale. |
 | `npm run check` | `astro check` | TypeScript and Astro diagnostics, including inside `.astro` files. |
 | `npm run test` | `vitest run` | The unit tests in `src/lib/*.test.ts` and `scripts/*.test.ts`. |
 | `npm run build` | `npm run validate && astro build` | The content rules, then a real production build into `dist/`. It does **not** run `astro check` or the tests, so a green build is not a green gate. |
@@ -56,7 +58,7 @@ the one this repository is built and tested against.
 a pull request:
 
 ```bash
-npm run validate && npm run check && npm run test && npm run build
+npm run validate && npm run schema -- --check && npm run check && npm run test && npm run build
 ```
 
 `npm run test:watch` is the same vitest in watch mode while you work.
@@ -77,11 +79,11 @@ rendered HTML goes through exactly these modules:
 
 ```
 content/teams/<slug>.yaml
-content/streamlines/<team>/<slug>.md
+content/streamlines/<team>/<slug>.yaml
 docs/*.md
    │
    │  src/content.config.ts     glob loaders; the id is the path, so
-   │                            content/streamlines/devops/secret-scanning.md
+   │                            content/streamlines/devops/secret-scanning.yaml
    │                            becomes "devops/secret-scanning"
    ▼
 src/lib/schema.ts               Zod shapes for one file
@@ -159,8 +161,8 @@ Content is checked twice, by two things that share one set of schemas.
 **Layer 1 — `src/lib/schema.ts`.** Zod shapes for a *single file in isolation*:
 required fields, string lengths, valid dates, enum membership against the ids in
 `site.config.ts`. It is imported by `src/content.config.ts` (so the Astro build
-enforces it) **and** by `scripts/content-rules.ts` (so the CLI validator
-enforces the same thing). One definition, so CI and your editor cannot disagree.
+enforces it) **and** by `scripts/load-content.ts` (so the CLI validator enforces
+the same thing). One definition, so CI and your editor cannot disagree.
 
 **Layer 2 — `scripts/content-rules.ts`.** Everything a per-file schema cannot
 see: does that team file exist, does the `team:` field match the directory the
@@ -168,6 +170,13 @@ file is in, does the `supersedes:` target exist, do the timeline dates run in
 lifecycle order, is `effective` actually after `date`, is a winding-down
 streamline carrying an end date. It also warns — never errors — about an active
 streamline with no update in 180 days.
+
+Neither of those reads the disk. `scripts/load-content.ts` does, and it is the
+only thing outside Astro that does: it walks `content/`, parses each file, and
+hands back one entry per file with either the parsed data or the reason there is
+none. A streamline's id comes from where its file sits, and that derivation
+lives there once — two copies of it, drifting, would mean two ids for one
+streamline and nothing anywhere to notice.
 
 `scripts/validate-content.ts` is the thin CLI wrapper: it calls
 `validateContent()`, groups problems by file, prints warnings then errors, and
@@ -235,14 +244,55 @@ separate file, because one module cannot see two configurations.
 
 ### One import gotcha
 
-`src/lib/schema.ts` imports `'../../site.config'` and `scripts/content-rules.ts`
-imports `'../site.config'` and `'../src/lib/schema'` — relative paths, not the
-`@config` and `@/` aliases the rest of `src/lib` uses. That is the convention on
-the validator's import path, because those modules are loaded three different
-ways: by Vite during the build, by vitest, and by `tsx` from the command line.
-Relative paths resolve identically in all three. Keep them relative when you
-edit those two files, and remember that a change there has to satisfy
-`npm run validate` as well as `npm run build`.
+`src/lib/schema.ts` imports `'../../site.config'`, and everything under
+`scripts/` imports `'../site.config'` and `'../src/lib/…'` — relative paths, not
+the `@config` and `@/` aliases the rest of `src/lib` uses. That is the
+convention on the validator's import path, because those modules are loaded
+three different ways: by Vite during the build, by vitest, and by `tsx` from the
+command line. Relative paths resolve identically in all three; `@config` does
+not, because under `tsx` it is resolved against the current directory rather
+than the repo root. Keep them relative when you edit anything in `scripts/`, and
+remember that a change there has to satisfy `npm run validate` as well as
+`npm run build`.
+
+### The third reader is the editor
+
+Both layers tell a contributor what is wrong after they have written it.
+[`scripts/json-schema.ts`](../scripts/json-schema.ts) converts the layer-1 Zod
+schemas to JSON Schema in `schemas/`, which is what tells them while they are
+typing. `npm run schema` regenerates it; `.vscode/settings.json` attaches it to
+`content/`, and CONTRIBUTING has the modeline for everything else.
+
+Three things about it are deliberate, and each one is load-bearing:
+
+**It is generated.** The interesting fields — `status`, `category`, `impact` —
+enumerate ids from `site.config.ts`. A fork that renames `deprecated` to
+`sunsetting` gets a schema offering `sunsetting`. A hand-written schema would
+have gone on suggesting a value the validator rejects, in a tooltip that looks
+authoritative, which is worse than offering nothing at all.
+
+**The output is committed.** An editor reads files from the working tree the
+moment a repository is opened; nothing runs a build step first. A `schemas/`
+that only existed after `npm run schema` would be missing exactly when it is
+wanted. So CI runs `npm run schema -- --check` and fails on drift — that step
+exists because the generated-and-committed pair is otherwise only as fresh as
+whoever last remembered.
+
+**Dates are collapsed to one string.** `dateSchema` is a union of `Date` and
+`string`, because YAML hands over an unquoted `2026-01-15` already parsed.
+Emitting that union tells an editor a date field accepts any string at all,
+which is the one thing it must not say. So `dateSchema` carries
+`.meta({ id: 'calendar-date' })` and the generator's `override` swaps the whole
+union for a `YYYY-MM-DD` pattern. Two things to know if you touch that callback:
+`z.toJSONSchema` throws on a `Date` before `override` ever runs, hence
+`unrepresentable: 'any'`; and what `override` is handed is Zod's *core* schema,
+which has no `.meta()` — read the id back with `z.globalRegistry.get()`.
+
+If you add a field to `src/lib/schema.ts`, give it a `.describe()`. That string
+is the hover text a contributor reads, and a test in
+[`scripts/json-schema.test.ts`](../scripts/json-schema.test.ts) fails if a field
+arrives without one. Then run `npm run schema` and commit `schemas/` alongside
+it.
 
 ---
 
@@ -298,6 +348,15 @@ paper. If you need a colour that no token provides, add a token.
 — all render inside `.prose`, a component layer at the bottom of `global.css`
 covering headings, lists, links, tables, blockquotes and code. It is built from
 the same tokens, so it follows the theme like everything else.
+
+Two renderers produce that Markdown, and which one runs depends only on where
+the text came from. Anything inside a content file — a streamline's `body`, an
+update's `body` — goes through `src/lib/markdown.ts`, which is `marked` with
+raw HTML dropped and heading ids added. The guides in `docs/` are the only
+thing that goes through Astro's own pipeline, because they are the only thing
+that needs a table of contents and the cross-reference plugin. The feeds reuse
+the first of those, so a reader sees the same HTML in their feed reader as on
+the page.
 
 ---
 
@@ -467,10 +526,13 @@ one layer when it parses the document and the other when it renders the markup.
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull
 request and on pushes to `main`: checkout, `setup-node` with
-`node-version-file: .nvmrc` and npm caching, `npm ci`, then **validate → check →
-test → build**, in that order. Content is validated first on purpose, so that a
-content mistake is reported as a content mistake rather than surfacing as a type
-error or a build failure three steps later. Concurrency is keyed on the ref with
+`node-version-file: .nvmrc` and npm caching, `npm ci`, then **validate → schema
+→ check → test → build**, in that order. Content is validated first on purpose,
+so that a content mistake is reported as a content mistake rather than surfacing
+as a type error or a build failure three steps later. The schema step is
+`npm run schema -- --check`, and it fails if `schemas/` no longer matches what
+`site.config.ts` and `src/lib/schema.ts` would produce — see
+[the third reader is the editor](#the-third-reader-is-the-editor). Concurrency is keyed on the ref with
 `cancel-in-progress: true`, so pushing again supersedes the previous run.
 
 ## Deploy
@@ -489,6 +551,61 @@ The same workflow runs on a nightly `schedule`, because "today" is baked in at
 build time — relative dates, the today marker on the roadmap, and the split
 between upcoming and recent changes — so without it a repository nobody merges
 to for a fortnight serves a fortnight-old idea of now.
+
+## Announcements
+
+[`.github/workflows/announce.yml`](../.github/workflows/announce.yml) posts what
+has changed to Slack on a schedule. It does nothing at all unless an adopter
+fills in `announcements` in `site.config.ts` and adds a `SLACK_BOT_TOKEN`
+secret, so a fork that merges the file and ignores it is unaffected.
+
+Three modules, split along the line that decides what is testable:
+
+| File | Does | Touches |
+| --- | --- | --- |
+| [`scripts/announcements.ts`](../scripts/announcements.ts) | works out what is news and writes the sentences | nothing — no disk, no network, no clock |
+| [`scripts/slack.ts`](../scripts/slack.ts) | one `chat.postMessage` call | the network |
+| [`scripts/announce.ts`](../scripts/announce.ts) | the CLI that joins them up | the disk, the config, the content |
+
+`collectAnnouncements` takes today, the ledger, the lifecycle and the locale as
+arguments and returns a list of messages. That is not fastidiousness: the
+question that decides whether this feature is usable is "would this run have
+sent fifty messages?", and it can only be asked cheaply if the answer does not
+depend on the calendar or on a Slack workspace.
+
+**The rule everything else follows from: a streamline the ledger has never seen
+announces nothing.** Its keys are recorded and the run moves on. A roadmap of any
+age holds dozens of dated things and most of them are in the future, so a
+lookback window cannot save a first run — only seeding can. It also makes bulk
+imports safe and turns a lost ledger into one quiet day rather than a burst.
+
+The ledger is `announced.json` on the `signpost-state` branch. Keys are
+`<streamlineId>#<subject>#<reason>`, three parts so that a later pass can add
+deadline reminders (`#t-30`, `#t-7`) without re-keying anything that exists. The
+stored value is a fingerprint of what was true when the message went out, which
+is what produces "moved from X to Y" rather than a second "added".
+
+**The ordering matters and is easy to get backwards.** A run writes every key it
+intends to use into the ledger and pushes that *before* it posts anything. If the
+push fails, nothing has been said: a red workflow and a day's delay. The other
+order risks saying something and then losing the record of having said it, which
+sends the same messages again tomorrow. The cost is that a message which then
+fails to post is already written down, so `--send` releases exactly those keys
+and the workflow pushes that correction under `if: always()`.
+
+Two things not to change without thinking them through. Messages name dates
+rather than states, because `status` and `timeline` are authored separately and a
+state claim can contradict the page it links to. And `announce` is
+`z.boolean().optional()` rather than defaulted to `true`, because Astro caches
+parsed content entries by file digest — a schema default never re-runs for an
+unchanged file, so a defaulted boolean is `true` for files somebody has edited
+and `undefined` for the rest.
+
+To see what a run would say, without a token and without writing anything:
+
+```bash
+npm run announce -- --dry-run
+```
 
 ---
 

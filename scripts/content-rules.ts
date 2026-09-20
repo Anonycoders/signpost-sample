@@ -1,11 +1,9 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
-
-import matter from 'gray-matter';
-import { load as loadYaml } from 'js-yaml';
-
 import { siteConfig } from '../site.config';
-import { phaseStageIds, streamlineSchema, teamSchema } from '../src/lib/schema';
+import { slugify, updateAnchor } from '../src/lib/anchor';
+import { phaseStageIds } from '../src/lib/schema';
+import type { StreamlineData, TeamData } from '../src/lib/schema';
+import { loadStreamlines, loadTeams, repoRelative } from './load-content';
+import type { Problem } from './load-content';
 
 /**
  * Content rules that a schema cannot express.
@@ -14,17 +12,13 @@ import { phaseStageIds, streamlineSchema, teamSchema } from '../src/lib/schema';
  * team exist, does that superseded streamline exist, do these dates tell a
  * story that could actually have happened.
  *
+ * Reading the files is load-content.ts's job; nothing here touches the disk.
  * Kept separate from the CLI entry point so the test suite can run the same
  * rules against fixtures.
  */
 
-export interface Problem {
-  /** Repository-relative path, so the message can be pasted into an editor. */
-  file: string;
-  /** Frontmatter field the problem belongs to, if it maps to one. */
-  field?: string;
-  message: string;
-}
+/** Re-exported: a problem is reported from here whoever first noticed it. */
+export type { Problem };
 
 export interface ValidationResult {
   errors: Problem[];
@@ -51,34 +45,15 @@ const FUTURE_LIMIT_YEARS = 3;
 /** An active streamline silent for this long is probably out of date. */
 const STALE_AFTER_DAYS = 180;
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function listFiles(dir: string, extensions: string[]): string[] {
-  if (!existsSync(dir)) return [];
-
-  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
-    .filter((entry) => extensions.some((ext) => entry.endsWith(ext)))
-    .map((entry) => join(dir, entry))
-    .sort();
-}
-
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-/** Turn a Zod issue path into a readable field name: `updates[0].impact`. */
-function fieldPath(path: readonly PropertyKey[]): string {
-  return path.reduce<string>((acc, segment) => {
-    if (typeof segment === 'number') return `${acc}[${segment}]`;
-    return acc ? `${acc}.${String(segment)}` : String(segment);
-  }, '');
 }
 
 export function validateContent(contentDir: string, repoRoot: string): ValidationResult {
   const errors: Problem[] = [];
   const warnings: Problem[] = [];
 
-  const rel = (absolute: string) => relative(repoRoot, absolute).split(sep).join('/');
+  const rel = (absolute: string) => repoRelative(absolute, repoRoot);
 
   // ---------- Configuration ----------
   // Checked here rather than left to fail silently: a winding-down stage with
@@ -95,113 +70,38 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
 
   // ---------- Teams ----------
 
-  const teamsDir = join(contentDir, 'teams');
-  const teamFiles = listFiles(teamsDir, ['.yaml', '.yml']);
-  const teamSlugs = new Set<string>();
+  const teams = loadTeams(contentDir, repoRoot);
+  const teamsBySlug = new Map<string, TeamData>();
 
-  for (const file of teamFiles) {
-    const slug = file
-      .slice(teamsDir.length + 1)
-      .replace(/\.(yaml|yml)$/, '')
-      .split(sep)
-      .join('/');
-
-    if (!SLUG_PATTERN.test(slug)) {
-      errors.push({
-        file: rel(file),
-        message: `"${slug}" is not a usable team slug. Name the file in lowercase-with-dashes, for example developer-experience.yaml.`,
-      });
-      continue;
-    }
-
-    let raw: unknown;
-    try {
-      raw = loadYaml(readFileSync(file, 'utf8'));
-    } catch (error) {
-      errors.push({
-        file: rel(file),
-        message: `This file is not valid YAML. ${(error as Error).message}`,
-      });
-      continue;
-    }
-
-    const parsed = teamSchema.safeParse(raw);
-    if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        errors.push({
-          file: rel(file),
-          field: fieldPath(issue.path) || undefined,
-          message: issue.message,
-        });
-      }
-      continue;
-    }
-
-    teamSlugs.add(slug);
+  for (const team of teams.entries) {
+    errors.push(...team.problems);
+    if (team.data) teamsBySlug.set(team.slug, team.data);
   }
 
-  if (teamFiles.length === 0) {
+  if (teams.entries.length === 0) {
     warnings.push({
-      file: rel(teamsDir),
+      file: rel(teams.dir),
       message: 'No teams are defined yet. Add one file per team in content/teams/.',
     });
   }
 
   // ---------- Streamlines ----------
 
-  const streamlinesDir = join(contentDir, 'streamlines');
-  const streamlineFiles = listFiles(streamlinesDir, ['.md']);
+  const streamlines = loadStreamlines(contentDir, repoRoot);
 
   /** id -> file, for resolving `supersedes` once everything is loaded. */
   const streamlineIds = new Map<string, string>();
-  const loaded: Array<{ file: string; id: string; data: ReturnType<typeof streamlineSchema.parse> }> =
-    [];
+  const loaded: Array<{ file: string; id: string; data: StreamlineData }> = [];
 
-  for (const file of streamlineFiles) {
-    const relativeId = file
-      .slice(streamlinesDir.length + 1)
-      .replace(/\.md$/, '')
-      .split(sep)
-      .join('/');
-
-    const segments = relativeId.split('/');
-
-    if (segments.length !== 2) {
-      errors.push({
-        file: rel(file),
-        message:
-          'Streamlines live one directory deep, as content/streamlines/<team-slug>/<streamline-slug>.md.',
-      });
-      continue;
-    }
-
-    const [dirSlug, streamlineSlug] = segments as [string, string];
-
-    if (!SLUG_PATTERN.test(streamlineSlug)) {
-      errors.push({
-        file: rel(file),
-        message: `"${streamlineSlug}" is not a usable slug. Name the file in lowercase-with-dashes.`,
-      });
-      continue;
-    }
-
-    let parsedFile: matter.GrayMatterFile<string>;
-    try {
-      parsedFile = matter(readFileSync(file, 'utf8'));
-    } catch (error) {
-      errors.push({
-        file: rel(file),
-        message: `The frontmatter block is not valid YAML. ${(error as Error).message}`,
-      });
-      continue;
-    }
+  for (const entry of streamlines.entries) {
+    const { file, teamSlug: dirSlug } = entry;
 
     // The directory is the source of truth for ownership; a mismatch means the
     // file was copied from another team and half-edited. Checked against the
     // raw value so it is reported even when the file has other problems —
     // otherwise the contributor fixes those, pushes, and only then learns
     // about this one.
-    const rawTeam = (parsedFile.data as Record<string, unknown>)['team'];
+    const rawTeam = entry.raw?.['team'];
     if (typeof rawTeam === 'string') {
       if (rawTeam !== dirSlug) {
         errors.push({
@@ -209,8 +109,8 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
           field: 'team',
           message: `This file is in content/streamlines/${dirSlug}/, so team must be "${dirSlug}", not "${rawTeam}". Move the file or fix the field.`,
         });
-      } else if (!teamSlugs.has(rawTeam)) {
-        const known = [...teamSlugs].sort().join(', ');
+      } else if (!teamsBySlug.has(rawTeam)) {
+        const known = [...teamsBySlug.keys()].sort().join(', ');
         errors.push({
           file: rel(file),
           field: 'team',
@@ -219,21 +119,14 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
       }
     }
 
-    const parsed = streamlineSchema.safeParse(parsedFile.data);
-    if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        errors.push({
-          file: rel(file),
-          field: fieldPath(issue.path) || undefined,
-          message: issue.message,
-        });
-      }
+    if (!entry.data) {
+      errors.push(...entry.problems);
       continue;
     }
 
-    const data = parsed.data;
-    streamlineIds.set(relativeId, rel(file));
-    loaded.push({ file, id: relativeId, data });
+    const data = entry.data;
+    streamlineIds.set(entry.id, rel(file));
+    loaded.push({ file, id: entry.id, data });
 
     // ---------- Owners ----------
     //
@@ -287,6 +180,27 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
       });
     }
 
+    // A streamline claiming a stage its own dates have already moved past.
+    // A warning for the same reason the phase version below is: the dates may
+    // be the plan and the status the truth of this morning, and failing a
+    // build over that teaches people to leave the dates out. But `status` is
+    // what the badge says on every card, on the roadmap and in the feed, while
+    // the stepper on the streamline's own page is drawn from the timeline — so
+    // one left behind puts the page in two minds about where the thing is.
+    const overtakenBy = datedStages.find(
+      (entry) =>
+        entry.date.getTime() <= Date.now() &&
+        STAGE_ORDER.indexOf(entry.stage) > STAGE_ORDER.indexOf(data.status),
+    );
+
+    if (overtakenBy) {
+      warnings.push({
+        file: rel(file),
+        field: 'status',
+        message: `This is marked ${STAGE_LABEL.get(data.status)}, but the timeline says it reached ${STAGE_LABEL.get(overtakenBy.stage)} on ${formatDate(overtakenBy.date)}. Move the status on, or correct the date.`,
+      });
+    }
+
     const windingDown = WINDING_DOWN_STAGES.find((stage) => stage.id === data.status);
     const endStage = TERMINAL_STAGES[0];
 
@@ -312,6 +226,7 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
     // actually run. Each phase is only checked against itself.
 
     const seenPhaseNames = new Map<string, number>();
+    const seenPhaseSlugs = new Map<string, number>();
 
     data.phases.forEach((phase, index) => {
       const key = phase.name.trim().toLowerCase();
@@ -325,6 +240,26 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
         });
       } else {
         seenPhaseNames.set(key, index);
+
+        // The same rule, one step further in. A phase has no id either, so
+        // anything that refers to one from outside the page reduces its name
+        // the way update anchors are reduced: lowercased, punctuation and
+        // accents dropped. "Phase 1 — pilot" and "Phase 1 / pilot" are two
+        // names to a reader and one name to everything else, and the second of
+        // the two is the one that quietly stops existing.
+        const slug = slugify(phase.name);
+        const sameSlugAt = seenPhaseSlugs.get(slug);
+
+        if (sameSlugAt === undefined) {
+          seenPhaseSlugs.set(slug, index);
+        } else {
+          const reduced = slug ? ` ("${slug}")` : '';
+          errors.push({
+            file: rel(file),
+            field: `phases[${index}].name`,
+            message: `"${phase.name}" and "${data.phases[sameSlugAt]!.name}" are different names that reduce to the same one${reduced} once punctuation is dropped. Phase names have to differ in their words, not only in their punctuation.`,
+          });
+        }
       }
 
       const phaseTimeline = (phase.timeline ?? {}) as Record<string, Date | undefined>;
@@ -436,7 +371,31 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
     const futureLimit = new Date();
     futureLimit.setUTCFullYear(futureLimit.getUTCFullYear() + FUTURE_LIMIT_YEARS);
 
+    // An update has no author-supplied id, so it is identified by its date and
+    // its title — that is what `updateAnchor` builds the fragment from, and
+    // what `feeds.ts` turns into the `id` of the update's Atom entry. Two
+    // updates that reduce to the same anchor therefore share one link on the
+    // page and one identity in the feed, where a duplicate id leaves readers'
+    // feed clients free to show one of the two and drop the other.
+    //
+    // Not only an exact repeat: the slug is cut at 48 characters, so two long
+    // titles posted on the same day collide on their opening words alone.
+    const seenAnchors = new Map<string, number>();
+
     data.updates.forEach((update, index) => {
+      const anchor = updateAnchor(update);
+      const sameAnchorAt = seenAnchors.get(anchor);
+
+      if (sameAnchorAt === undefined) {
+        seenAnchors.set(anchor, index);
+      } else {
+        errors.push({
+          file: rel(file),
+          field: `updates[${index}].title`,
+          message: `This and updates[${sameAnchorAt}] are both dated ${formatDate(update.date)} and both come out as "#${anchor}", so they would share a single link on the page and a single entry in the feed. Give one of them a different title.`,
+        });
+      }
+
       if (update.date < EARLIEST_SENSIBLE || update.date > futureLimit) {
         errors.push({
           file: rel(file),
@@ -507,7 +466,7 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
       errors.push({
         file: rel(file),
         field: 'supersedes',
-        message: `"${data.supersedes}" does not exist. Expected a file at content/streamlines/${data.supersedes}.md.`,
+        message: `"${data.supersedes}" does not exist. Expected a file at content/streamlines/${data.supersedes}.yaml.`,
       });
     }
   }
@@ -540,9 +499,48 @@ export function validateContent(contentDir: string, repoRoot: string): Validatio
     }
   }
 
+  // A streamline that will announce into thin air. The run works out what
+  // changed, finds nowhere to send it, and drops it — which looks exactly like
+  // a streamline that never changed.
+  //
+  // Only ever asked when no site-wide channel is set, because one of those
+  // makes every streamline routable. If nothing anywhere names a channel the
+  // warning goes against site.config.ts instead, on the same reasoning as the
+  // one above: there is one fix, and a copy of it per streamline is not more
+  // helpful, it is just longer.
+
+  const announcements = siteConfig.announcements;
+
+  if (announcements && !announcements.channel) {
+    const homeless = loaded.filter(
+      ({ data }) =>
+        data.announce !== false &&
+        !data.announceChannel &&
+        !teamsBySlug.get(data.team)?.announceChannel,
+    );
+
+    const speaking = loaded.filter(({ data }) => data.announce !== false);
+
+    if (homeless.length > 0 && homeless.length === speaking.length) {
+      warnings.push({
+        file: 'site.config.ts',
+        field: 'announcements.channel',
+        message: `Announcements are configured, but no channel is named anywhere — not here, not on a team, not on a streamline — so nothing would ever be sent. Set announcements.channel, or give each team an announceChannel.`,
+      });
+    } else {
+      for (const { file, data } of homeless) {
+        warnings.push({
+          file: rel(file),
+          field: 'announceChannel',
+          message: `Announcements are configured, but nothing says where this one goes. Add announceChannel here, or to content/teams/${data.team}.yaml, or set announcements.channel in site.config.ts — otherwise its changes are worked out and then dropped.`,
+        });
+      }
+    }
+  }
+
   return {
     errors,
     warnings,
-    counts: { teams: teamSlugs.size, streamlines: loaded.length },
+    counts: { teams: teamsBySlug.size, streamlines: loaded.length },
   };
 }

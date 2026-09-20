@@ -1,4 +1,3 @@
----
 title: Jenkins pipelines
 team: devops
 category: infrastructure
@@ -18,6 +17,24 @@ timeline:
 links:
   - label: Migrating from Jenkins
     url: https://github.com/example-org/devops-runbooks/blob/main/jenkins-migration.md
+body: |
+  ## Why this is going away
+
+  Two CI systems means two sets of credentials, two sets of agents to patch and
+  two places to look when a build breaks. The
+  [self-hosted Actions runners](../devops/github-actions-runners) now cover
+  everything Jenkins did for us.
+
+  ## What happens on 31 March 2027
+
+  The Jenkins controllers and agents are switched off and the hosts are reclaimed.
+  Build history will be exported to object storage and kept for two years; there
+  will be no running UI to browse it.
+
+  ## What we need from you
+
+  Migrate before the date, or tell us your pipeline can be deleted. Both are fine
+  answers — silence is not.
 updates:
   - date: 2026-09-08
     status: deprecated
@@ -34,22 +51,3 @@ updates:
     body: |
       No new pipelines will be created on Jenkins. Existing ones keep running
       until **31 March 2027**, after which the servers are switched off.
----
-
-## Why this is going away
-
-Two CI systems means two sets of credentials, two sets of agents to patch and
-two places to look when a build breaks. The
-[self-hosted Actions runners](../devops/github-actions-runners) now cover
-everything Jenkins did for us.
-
-## What happens on 31 March 2027
-
-The Jenkins controllers and agents are switched off and the hosts are reclaimed.
-Build history will be exported to object storage and kept for two years; there
-will be no running UI to browse it.
-
-## What we need from you
-
-Migrate before the date, or tell us your pipeline can be deleted. Both are fine
-answers — silence is not.

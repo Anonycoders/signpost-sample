@@ -1,4 +1,3 @@
----
 title: Model evaluation harness
 team: ai-platform
 category: ai
@@ -14,6 +13,16 @@ timeline:
   in-development: 2026-08-03
   rolling-out: 2026-12-07
   generally-available: 2027-03-01
+body: |
+  ## What this is
+
+  A test runner for model-backed features: you define cases and graders, it runs
+  them on every change and reports a comparison against the previous version.
+
+  ## Who this affects
+
+  Teams shipping features backed by a model. Nothing changes for you until rollout
+  in December, but contributing evaluation cases now is what makes it useful then.
 updates:
   - date: 2026-08-03
     status: in-development
@@ -22,14 +31,3 @@ updates:
     body: |
       Two product teams have contributed graded examples. We need more, and from
       more domains — if your team has a task with known-good answers, talk to us.
----
-
-## What this is
-
-A test runner for model-backed features: you define cases and graders, it runs
-them on every change and reports a comparison against the previous version.
-
-## Who this affects
-
-Teams shipping features backed by a model. Nothing changes for you until rollout
-in December, but contributing evaluation cases now is what makes it useful then.

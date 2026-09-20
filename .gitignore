@@ -11,6 +11,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# announcements: the run's own scratch, and the ledger when it is checked out
+# here rather than on its own branch
+announce-plan.json
+announced.json
+state/
+
 # environment
 .env
 .env.production
@@ -20,4 +26,7 @@ pnpm-debug.log*
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+# Committed: it is what attaches schemas/ to content/, which is the whole
+# reason a contributor gets completion in a streamline file.
+!.vscode/settings.json
 .idea/

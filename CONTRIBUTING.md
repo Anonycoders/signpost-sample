@@ -11,8 +11,10 @@ Two things you might be here to do:
 - **[Add a streamline](#add-a-streamline)** — put a new product, initiative or
   migration on the roadmap. Five minutes, one new file.
 
-You do not need to run anything locally for either. If you would rather see it
-before you push, see [Preview it locally](#preview-it-locally).
+You do not need to run anything locally for either. If you edit these files
+often, [your editor can fill them in for you](#let-your-editor-fill-it-in-for-you);
+if you would rather see the page before you push, see
+[Preview it locally](#preview-it-locally).
 
 ---
 
@@ -108,12 +110,11 @@ links:
 ```
 
 **2. Create the streamline file** at
-`content/streamlines/<your-team>/<streamline-slug>.md`. The directory must be
+`content/streamlines/<your-team>/<streamline-slug>.yaml`. The directory must be
 your team's slug — that is what wires up ownership and review. Copy this whole
 block and edit it:
 
-```markdown
----
+```yaml
 title: Kubernetes 1.31 upgrade
 team: devops # must match the directory this file is in
 category: infrastructure
@@ -139,24 +140,25 @@ timeline:
 links:
   - label: Migration guide
     url: https://github.com/example-org/devops-runbooks/blob/main/k8s-1-31.md
+body: |
+  ## Why we are doing this
+
+  Optional long-form Markdown, shown on the detail page. Motivation, scope,
+  FAQ — whatever a team that depends on you would want to read. Everything
+  under `body: |` is indented two spaces; that indentation is not part of
+  what the page shows.
+
+  ## Who this affects
+
+  Be specific about who has to do something, and who can ignore this entirely.
+
+  ## What we need from you
+
+  The ask, with the deadline.
 updates:
   - date: 2026-09-01
     impact: info
     title: All staging clusters are running 1.31
----
-
-## Why we are doing this
-
-Optional long-form Markdown, shown on the detail page. Motivation, scope, FAQ —
-whatever a team that depends on you would want to read.
-
-## Who this affects
-
-Be specific about who has to do something, and who can ignore this entirely.
-
-## What we need from you
-
-The ask, with the deadline.
 ```
 
 **3. Open a pull request** with that one file. Your team owns the directory, so
@@ -170,7 +172,7 @@ catalog, on your team page and in the Atom feed as soon as it merges.
 
 ## Field reference
 
-### Streamline frontmatter
+### Streamline fields
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -184,6 +186,9 @@ catalog, on your team page and in the Atom feed as soon as it merges.
 | `links` | no | `label` + full `url`. Migration guides, dashboards, docs |
 | `supersedes` | no | `team-slug/streamline-slug` of the thing this replaces |
 | `phases` | no | The rollout, audience by audience — see below |
+| `announceChannel` | no | Send this one's announcements somewhere else — see below |
+| `announce` | no | `false` keeps this one out of the announcements |
+| `body` | no | The long explanation, Markdown, as a block scalar |
 | `updates` | no | Newest first |
 
 ### Reaching an owner on Slack
@@ -213,6 +218,58 @@ This only works if your instance has been pointed at your workspace —
 `slackWorkspaceUrl` in [site.config.ts](site.config.ts), set once for everyone.
 If it has not been, the validator will tell you rather than leaving you with
 handles that quietly refuse to link.
+
+### Announcing changes in chat
+
+Only relevant if your instance has this turned on — if it has not, every field
+here is ignored and you can skip the section. When it is on, a scheduled job
+posts what changed to Slack, so that people who depend on your work hear about a
+date moving without having to visit the site.
+
+You do not mark anything as announced. The job works out what has changed since
+it last looked, and the first time it sees a streamline it records it silently —
+so adding a file, however much history is in it, never floods a channel.
+
+Three fields let you steer it.
+
+```yaml
+announceChannel: '#data-platform-news' # this one goes somewhere else
+announce: false # or nowhere at all
+```
+
+`announceChannel` overrides the channel your team is announced in, for the one
+thing that matters to a different audience than everything else you own. Write
+it as `#channel-name`, or as the channel ID Slack shows under **View channel
+details** (`C0123ABCD`) — an ID survives the channel being renamed. The same
+field on `content/teams/<team>.yaml` sets it for everything that team owns.
+
+Note that this is **not** the team's existing `channel:` field. That one is
+inbound: where someone goes to ask you a question. This one is outbound, usually
+a channel your consumers are in rather than one you work in.
+
+`announce: false` keeps a streamline quiet. Its changes are still recorded, so
+turning it back on later says nothing about the months it was off — it picks up
+from that moment.
+
+And on a single update:
+
+```yaml
+updates:
+  - date: 2026-09-10
+    impact: breaking
+    title: Ingress v1beta1 is removed on 2 November
+    body: |
+      The long version, with headings and a table, for someone on the page.
+    announcement: >-
+      Your Ingress manifests stop working on 2 November. The migration guide has
+      a one-line fix.
+```
+
+Without `announcement`, the chat message carries a shortened `body`. Add one
+when the body would not survive the trip — too long, leaning on formatting chat
+cannot carry, or written for someone who is already reading the page. Either way
+the title and a link to the update are put around it, so an announcement can
+never leave a reader with no way through to the detail.
 
 ### Rollout phases
 
@@ -287,7 +344,7 @@ content mistake instead of being buried in a stack trace.
 It names the file, the field and what to do:
 
 ```
-error content/streamlines/devops/jenkins-pipelines.md
+error content/streamlines/devops/jenkins-pipelines.yaml
     timeline: A deprecated streamline must say when it will be retired. Add a `retired` date to the timeline so the teams depending on it know their deadline.
     updates[0].effective: effective (2026-08-01) is not after date (2026-09-08). Use effective only when a change lands later than the day you are posting about it; if they are the same day, remove it.
 
@@ -298,7 +355,7 @@ error content/streamlines/devops/jenkins-pipelines.md
 
 - A `team` that has no file in `content/teams/`, or does not match the
   directory the file is in
-- A file outside `content/streamlines/<team>/<slug>.md`, or a slug that is not
+- A file outside `content/streamlines/<team>/<slug>.yaml`, or a slug that is not
   lowercase-with-dashes
 - An unknown `status`, `category` or `impact` — the message lists the valid
   values
@@ -312,16 +369,66 @@ error content/streamlines/devops/jenkins-pipelines.md
 - A date so far off it is almost certainly a typo in the year
 - A `supersedes` pointing at a streamline that does not exist
 - A summary or title over its length limit
+- Two updates posted on the same day under the same title, or under titles alike
+  enough to collide once shortened — either way they would share one link on the
+  page and one entry in the feed, and the second would effectively vanish
+- Two phase names that differ only in their punctuation
+- An `announceChannel` written as a bare name. Slack will not resolve one, so it
+  has to be `#channel-name` or a channel ID
 
 **It will warn, but let you merge:**
 
 - An active streamline with no update for six months. Either post something or
   move the status on — a roadmap nobody maintains is worse than no roadmap.
+- A `status` its own timeline has already moved past. The badge says one stage
+  and the dates say a later one, and a reader has no way to know which is right.
 - A `slackId` with no `slack` handle beside it, or with no workspace configured
   for the site — either way the ID does nothing, and silently.
+- A streamline whose changes would be announced but which resolves to no
+  channel. The job would work out what changed and then drop it, which looks
+  from the outside exactly like a streamline that never changed.
 
 Nothing in the validator cares about prose. It cannot tell you that your update
 is vague, so that part is on you and your reviewer.
+
+---
+
+## Let your editor fill it in for you
+
+Worth the two minutes if you write content more than once. Open the repository
+in VS Code and accept the extension recommendation it offers you — that is the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
+and once it is installed a streamline file starts completing itself. `Ctrl-Space`
+lists the fields that exist. A stage name you half-remember gets offered in
+full. A date in the wrong format is underlined while you type it, not three
+minutes later in CI.
+
+The lists it offers are **this** repository's, not the ones Signpost ships with.
+They are generated from `site.config.ts` into `schemas/`, so if your
+organization renamed a stage or added a category, that is what you are offered.
+
+If you use something other than VS Code, anything that speaks
+[yaml-language-server](https://github.com/redhat-developer/yaml-language-server)
+— Neovim, Helix, Zed, the JetBrains IDEs — gets the same thing from a comment on
+the first line of the file:
+
+```yaml
+# yaml-language-server: $schema=../../../schemas/streamline.schema.json
+```
+
+Three levels up from `content/streamlines/<team>/`, two from a team file in
+`content/teams/`:
+
+```yaml
+# yaml-language-server: $schema=../../schemas/team.schema.json
+```
+
+None of this replaces `npm run validate`. The schema knows the shape and the
+vocabulary — which fields exist, which values are allowed, what a date looks
+like. It does not know the rules that need to look at the rest of the file, like
+a `status:` that has fallen behind a date in its own timeline. Nor does any of
+it reach you when you edit a file through GitHub in the browser, which is a
+perfectly good way to post an update; CI is still what has the last word.
 
 ---
 

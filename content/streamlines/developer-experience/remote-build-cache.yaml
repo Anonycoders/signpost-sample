@@ -1,4 +1,3 @@
----
 title: Remote build cache
 team: developer-experience
 category: developer-experience
@@ -17,6 +16,18 @@ timeline:
 links:
   - label: Enabling the cache
     url: https://github.com/example-org/devex-handbook/blob/main/build-cache.md
+body: |
+  ## What this is
+
+  A content-addressed cache shared between CI runners and, optionally, local
+  machines. Builds that have already been done anywhere are fetched rather than
+  repeated.
+
+  ## Who this affects
+
+  Teams with slow builds, which is where the benefit is concentrated. Adoption is
+  opt-in and reversible: remove the configuration block and builds go back to how
+  they were.
 updates:
   - date: 2026-09-15
     status: rolling-out
@@ -31,16 +42,3 @@ updates:
     body: |
       Three lines of configuration, documented in the handbook. Nothing changes
       until you add them.
----
-
-## What this is
-
-A content-addressed cache shared between CI runners and, optionally, local
-machines. Builds that have already been done anywhere are fetched rather than
-repeated.
-
-## Who this affects
-
-Teams with slow builds, which is where the benefit is concentrated. Adoption is
-opt-in and reversible: remove the configuration block and builds go back to how
-they were.

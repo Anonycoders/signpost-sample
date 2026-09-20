@@ -1,4 +1,3 @@
----
 title: Golden path service templates
 team: developer-experience
 category: developer-experience
@@ -19,6 +18,17 @@ timeline:
 links:
   - label: Template catalog
     url: https://github.com/example-org/golden-path
+body: |
+  ## What this is
+
+  `create-service` scaffolds a repository that already builds, deploys, reports
+  metrics and passes the production readiness checklist. Templates exist for Go,
+  Python, TypeScript and a plain container.
+
+  ## Who this affects
+
+  Anyone starting something new. Existing services are not required to adopt the
+  templates, though the same building blocks are available separately.
 updates:
   - date: 2026-07-20
     status: generally-available
@@ -31,15 +41,3 @@ updates:
     status: generally-available
     impact: info
     title: Templates are generally available
----
-
-## What this is
-
-`create-service` scaffolds a repository that already builds, deploys, reports
-metrics and passes the production readiness checklist. Templates exist for Go,
-Python, TypeScript and a plain container.
-
-## Who this affects
-
-Anyone starting something new. Existing services are not required to adopt the
-templates, though the same building blocks are available separately.

@@ -1,4 +1,3 @@
----
 title: LLM gateway
 team: ai-platform
 category: ai
@@ -38,6 +37,22 @@ phases:
     status: proposed
     timeline:
       generally-available: 2026-10-19
+body: |
+  ## Why this exists
+
+  Model access grew organically: several teams hold their own provider keys, spend
+  is invisible until the invoice arrives, and there is no shared record of what was
+  sent to a third party.
+
+  ## Who this affects
+
+  Every team calling a model API. The change is small — a base URL and a key — but
+  it is mandatory, because the old keys are being revoked.
+
+  ## What we need from you
+
+  Move before **2 November**. If you have a use case the gateway does not cover
+  yet, raise it in `#ai-platform` now rather than after the cutover.
 updates:
   - date: 2026-09-16
     status: rolling-out
@@ -63,20 +78,3 @@ updates:
     status: in-development
     impact: info
     title: Gateway is serving its first internal traffic
----
-
-## Why this exists
-
-Model access grew organically: several teams hold their own provider keys, spend
-is invisible until the invoice arrives, and there is no shared record of what was
-sent to a third party.
-
-## Who this affects
-
-Every team calling a model API. The change is small — a base URL and a key — but
-it is mandatory, because the old keys are being revoked.
-
-## What we need from you
-
-Move before **2 November**. If you have a use case the gateway does not cover
-yet, raise it in `#ai-platform` now rather than after the cutover.

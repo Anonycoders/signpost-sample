@@ -1,4 +1,3 @@
----
 title: Self-hosted GitHub Actions runners
 team: devops
 category: infrastructure
@@ -20,6 +19,18 @@ links:
     url: https://github.com/example-org/devops-runbooks/blob/main/actions-runners.md
   - label: Migrating from Jenkins
     url: https://github.com/example-org/devops-runbooks/blob/main/jenkins-migration.md
+body: |
+  ## What this is
+
+  Autoscaling runners on our own infrastructure, so CI jobs can reach internal
+  services and registries that the hosted runners cannot. Capacity scales with
+  demand and is billed back to the owning team.
+
+  ## Who this affects
+
+  Every team running CI. If you are already on GitHub Actions, you get these
+  runners by adding a label to your workflow. If you are still on Jenkins, see
+  [Jenkins pipelines](../devops/jenkins-pipelines) for the retirement date.
 updates:
   - date: 2026-06-01
     status: generally-available
@@ -35,16 +46,3 @@ updates:
     body: |
       Migration is self-service and most pipelines take under a day. Book time
       with us in `#devops` if yours is unusual.
----
-
-## What this is
-
-Autoscaling runners on our own infrastructure, so CI jobs can reach internal
-services and registries that the hosted runners cannot. Capacity scales with
-demand and is billed back to the owning team.
-
-## Who this affects
-
-Every team running CI. If you are already on GitHub Actions, you get these
-runners by adding a label to your workflow. If you are still on Jenkins, see
-[Jenkins pipelines](../devops/jenkins-pipelines) for the retirement date.

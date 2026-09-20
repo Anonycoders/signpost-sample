@@ -1,4 +1,3 @@
----
 title: Kubernetes 1.31 upgrade
 team: devops
 category: infrastructure
@@ -21,6 +20,25 @@ links:
     url: https://github.com/example-org/devops-runbooks/blob/main/k8s-1-31.md
   - label: Cluster upgrade schedule
     url: https://github.com/example-org/devops-runbooks/blob/main/k8s-waves.md
+body: |
+  ## Why we are doing this
+
+  Our clusters are two minor versions behind upstream support. Staying there means
+  we stop receiving security patches and cannot adopt the scheduling improvements
+  that several teams have asked for.
+
+  ## Who this affects
+
+  Every team deploying to a shared cluster. The practical impact is narrow: the
+  only breaking removal that touches our workloads is the beta Ingress API. Teams
+  already on the golden path templates are on the supported API and need to do
+  nothing.
+
+  ## What we need from you
+
+  Check your manifests against the migration guide before **1 October**. If your
+  service cannot be migrated in time, tell us in `#devops` and we will schedule
+  your cluster in the final wave.
 updates:
   - date: 2026-09-10
     status: rolling-out
@@ -45,23 +63,3 @@ updates:
     status: in-development
     impact: info
     title: Upgrade plan agreed, work has started
----
-
-## Why we are doing this
-
-Our clusters are two minor versions behind upstream support. Staying there means
-we stop receiving security patches and cannot adopt the scheduling improvements
-that several teams have asked for.
-
-## Who this affects
-
-Every team deploying to a shared cluster. The practical impact is narrow: the
-only breaking removal that touches our workloads is the beta Ingress API. Teams
-already on the golden path templates are on the supported API and need to do
-nothing.
-
-## What we need from you
-
-Check your manifests against the migration guide before **1 October**. If your
-service cannot be migrated in time, tell us in `#devops` and we will schedule
-your cluster in the final wave.

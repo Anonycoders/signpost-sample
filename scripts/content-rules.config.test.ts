@@ -11,8 +11,8 @@ import { describe, expect, it, vi } from 'vitest';
  * that an organization can rename every stage without editing code. These
  * tests hold that promise honest for the one rule that used to know two stage
  * names by heart: a streamline that is going away must say when it ends. The
- * Slack rule below is here for the same reason from the other direction — it
- * has to go quiet once the workspace exists.
+ * two rules below are here for the same reason from the other direction — each
+ * has to go quiet once the configuration it was asking for exists.
  *
  * A separate file from content-rules.test.ts because the whole point is a
  * different site.config, and the rules read it once at import.
@@ -23,6 +23,10 @@ vi.mock('../site.config', () => {
     name: 'Atlas',
     locale: 'en-GB',
     slackWorkspaceUrl: 'https://atlas.slack.com',
+    announcements: {
+      siteUrl: 'https://atlas.example.com',
+      channel: '#atlas-news',
+    },
     lifecycle: [
       { id: 'idea', label: 'Idea', description: 'Being considered.', tone: 'gray' },
       { id: 'live', label: 'Live', description: 'In production.', tone: 'green' },
@@ -71,8 +75,7 @@ channel: "#platform"
 `;
 
 function streamline(status: string, timeline: string) {
-  return `---
-title: Build cache
+  return `title: Build cache
 team: platform
 category: platform
 status: ${status}
@@ -84,7 +87,6 @@ updates:
   - date: 2026-03-02
     impact: info
     title: Cache is live
----
 `;
 }
 
@@ -94,7 +96,7 @@ describe('the anti-surprise rule on a renamed lifecycle', () => {
   it('names the organization own stages, not "deprecated" and "retired"', () => {
     const result = fixture({
       'content/teams/platform.yaml': TEAM,
-      'content/streamlines/platform/build-cache.md': streamline(
+      'content/streamlines/platform/build-cache.yaml': streamline(
         'sunsetting',
         `
   idea: 2025-11-01
@@ -113,7 +115,7 @@ describe('the anti-surprise rule on a renamed lifecycle', () => {
   it('is satisfied by a date on the renamed terminal stage', () => {
     const result = fixture({
       'content/teams/platform.yaml': TEAM,
-      'content/streamlines/platform/build-cache.md': streamline(
+      'content/streamlines/platform/build-cache.yaml': streamline(
         'sunsetting',
         `
   idea: 2025-11-01
@@ -129,7 +131,7 @@ describe('the anti-surprise rule on a renamed lifecycle', () => {
   it('leaves a stage that is merely not terminal alone', () => {
     const result = fixture({
       'content/teams/platform.yaml': TEAM,
-      'content/streamlines/platform/build-cache.md': streamline(
+      'content/streamlines/platform/build-cache.yaml': streamline(
         'live',
         `
   idea: 2025-11-01
@@ -145,7 +147,7 @@ describe('slack member IDs on a configured workspace', () => {
   it('says nothing, because the ids now have somewhere to point', () => {
     const result = fixture({
       'content/teams/platform.yaml': TEAM,
-      'content/streamlines/platform/build-cache.md': streamline(
+      'content/streamlines/platform/build-cache.yaml': streamline(
         'live',
         `
   idea: 2025-11-01
@@ -158,5 +160,24 @@ describe('slack member IDs on a configured workspace', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.warnings.filter((warning) => warning.file === 'site.config.ts')).toEqual([]);
+  });
+});
+
+describe('announcements with a site-wide channel', () => {
+  it('says nothing, because one channel routes everything', () => {
+    // Neither the team nor the streamline names a channel, and that is fine:
+    // the fallback exists, so nothing can be worked out and then dropped.
+    const result = fixture({
+      'content/teams/platform.yaml': TEAM,
+      'content/streamlines/platform/build-cache.yaml': streamline(
+        'live',
+        `
+  idea: 2025-11-01
+  live: 2026-03-01`,
+      ),
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.filter((warning) => warning.field?.startsWith('announce'))).toEqual([]);
   });
 });

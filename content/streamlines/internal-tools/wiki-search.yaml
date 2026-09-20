@@ -1,4 +1,3 @@
----
 title: Standalone wiki search
 team: internal-tools
 category: internal-tooling
@@ -17,6 +16,17 @@ timeline:
   generally-available: 2023-06-01
   deprecated: 2025-11-03
   retired: 2026-06-30
+body: |
+  ## Why this was retired
+
+  Two search boxes that returned different results for the same query, neither of
+  which covered everything. The service catalog now indexes the wiki alongside
+  service metadata, so one search covers both.
+
+  ## Kept here on purpose
+
+  Retired streamlines stay on this site rather than being deleted, so that anyone
+  following an old link or wondering what happened to a tool can find the answer.
 updates:
   - date: 2026-06-30
     status: retired
@@ -29,15 +39,3 @@ updates:
     status: deprecated
     impact: action-required
     title: Move your saved searches before 30 June 2026
----
-
-## Why this was retired
-
-Two search boxes that returned different results for the same query, neither of
-which covered everything. The service catalog now indexes the wiki alongside
-service metadata, so one search covers both.
-
-## Kept here on purpose
-
-Retired streamlines stay on this site rather than being deleted, so that anyone
-following an old link or wondering what happened to a tool can find the answer.
