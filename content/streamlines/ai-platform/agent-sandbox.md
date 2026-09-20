@@ -16,6 +16,20 @@ timeline:
 links:
   - label: Proposal and open questions
     url: https://github.com/example-org/ai-platform-docs/blob/main/rfc-agent-sandbox.md
+phases:
+  - name: Phase 1 — agent builders
+    audience: Platform engineers building agents
+    status: proposed
+    timeline:
+      rolling-out: 2027-03-01
+  - name: Phase 2 — existing internal-API agents
+    audience: Teams already running agents against internal APIs
+    status: proposed
+    timeline:
+      rolling-out: 2027-05-10
+  - name: Phase 3 — self-serve
+    audience: Any team, without asking us first
+    status: proposed
 updates:
   - date: 2026-09-08
     status: proposed
