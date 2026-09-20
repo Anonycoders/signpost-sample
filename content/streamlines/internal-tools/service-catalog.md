@@ -9,6 +9,7 @@ summary: >-
 owners:
   - name: Deniz Aydin
     github: denizaydin
+    slack: deniz.aydin
 timeline:
   proposed: 2025-03-03
   in-development: 2025-05-12

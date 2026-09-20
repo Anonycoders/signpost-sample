@@ -9,8 +9,9 @@ summary: >-
 owners:
   - name: Deniz Aydin
     github: denizaydin
+    slack: deniz.aydin
   - name: Laura Mensah
-    github: lauramensah
+    slack: laura.mensah
 timeline:
   proposed: 2026-03-16
   in-development: 2026-06-08
