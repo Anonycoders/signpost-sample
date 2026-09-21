@@ -12,9 +12,24 @@ version numbers mean something specific for a fork that merges updates — see
 
 ## [Unreleased]
 
-**Upgrading:** Nothing to do.
+**Upgrading:** Nothing to do, unless you forked a fork rather than Signpost
+itself. In that case set `template.url` in `site.config.ts` to the repository
+you actually forked, or `npm run update` will offer to take its updates from
+ours.
 
 ### Added
+
+- `npm run update` takes an update from the repository this one was forked
+  from. It says what merging would bring before it touches anything — which
+  releases you are behind, and the upgrade note each of them carries — then
+  merges. `--dry-run` stops after the report. It refuses on a dirty tree, names
+  the files on a conflict, and never pushes.
+- `template` in `site.config.ts`, optional: where `npm run update` fetches from
+  when there is no git remote named `template`. A direct fork leaves it alone.
+- The adopting guide says where the fork-and-merge model is going — the engine
+  as a dependency, at 1.0 — and what that means for a fork today, which is that
+  `content/` and `site.config.ts` are the only two places to edit, because that
+  boundary is what a package would later have to keep.
 
 - `npm run release -- 1.2.3` cuts a release: it closes the Unreleased section
   under a dated heading, opens a fresh one, updates the links, sets the version

@@ -481,6 +481,45 @@ which deprecation is a different product from one that does not.
 
 ---
 
+## Taking updates
+
+A fork is a copy, so an update is a merge. One command does it:
+
+```bash
+npm run update -- --dry-run
+```
+
+That fetches the template and says what merging would bring: how many commits,
+across how many files, which releases you are behind, and — the part worth
+reading — the upgrade note each of those releases carries. Somebody wrote those
+notes at the moment they made the change, while they still knew what it would
+cost you. Drop `--dry-run` and the same report is followed by the merge.
+
+Mind the `run`. `npm update` without it is npm's own command and updates your
+dependencies, which is a different thing entirely.
+
+It refuses to start if you have uncommitted changes, because `git merge --abort`
+puts back the merge and not work that was never committed. It never pushes: the
+merge is one local commit, `git reset --hard ORIG_HEAD` undoes it, and what to
+run next is printed when it finishes.
+
+**Where it fetches from** is a git remote named `template`, or — if you have not
+got one — the `template` field in `site.config.ts`, which it then adds for you. A
+direct fork of Signpost leaves that field as it is; a fork of a fork points it at
+whichever repository it actually forked. If you have set the remote yourself and
+it disagrees with the config, the remote wins and the command says so rather than
+repointing it behind your back.
+
+**On a conflict** it stops and names the files. Two are worth expecting:
+
+- `site.config.ts`, the likeliest, because it is the file you edit and the file
+  new options arrive in. Read both sides rather than keeping yours wholesale:
+  keeping yours silently drops whatever field the release just added, and no
+  upgrade note can warn you about that, because upstream does not know which
+  lines you changed.
+- Anything under `content/`, which means the template has started shipping a
+  file where you keep your own. Your content is yours.
+
 ## What you are signing up for
 
 Signpost has no backend, no database and no scheduled maintenance. The running
@@ -493,6 +532,31 @@ team's approval) and it makes staleness visible (the validator warns, the
 roadmap shows the gap). It cannot make anybody care. The organizations where
 this works are the ones where "did you put it on Signpost?" becomes a normal
 question in a planning meeting.
+
+## Where this is going
+
+Today Signpost is a template. You fork it, you own the whole thing, and you take
+updates by merging — [Taking updates](#taking-updates), above. That model earns
+its place at this size: everything is visible and hackable, there is nothing to
+publish and no registry to depend on, and a fork can go its own way whenever it
+wants to without asking anybody. What it costs you is the merges, which is why a
+release carries a version number and an upgrade note rather than a list of
+commits.
+
+The direction for 1.0 is the other model — the engine as a dependency. A
+Signpost repository would then hold `content/`, `site.config.ts` and the
+workflows, and take the rest from a package, the way a MkDocs or Docusaurus site
+takes its theme. Updating would be `npm update` and reading a changelog rather
+than a merge. No date is being promised here, and nothing about the way it works
+today is deprecated by saying it.
+
+**What that means for you now** is the line this guide opens with, and it is
+worth taking literally: edit `content/` and `site.config.ts`, and leave the rest
+alone. That boundary is not housekeeping — it is the interface a package would
+have to keep. A fork that has stayed inside it can be handed a dependency one
+day and lose nothing. A fork that has edited a component to change a label has
+to unpick that first, and no upgrade note will ever mention it, because nobody
+upstream knows it happened.
 
 ## Getting help
 
